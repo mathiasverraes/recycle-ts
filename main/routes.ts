@@ -25,7 +25,11 @@ function freshState() {
     return {
         card_id: null,
         priceClass: "Default",
-        price_amount: 0
+        price_amount: 0,
+        exemption_budget: {
+            "Construction waste": 0,
+            "Green waste": 0,
+        }
     };
 }
 
@@ -56,6 +60,8 @@ function findPriceClassForCity(city: any) {
 function projectIdCardRegistered(state: any, event: any) {
     state.card_id = event.payload.card_id;
     state.priceClass = findPriceClassForCity(event.payload.city);
+    state.exemption_budget["Construction waste"] = state.priceClass["Construction waste"].exemption;
+    state.exemption_budget["Green waste"] = state.priceClass["Green waste"].exemption;
     return state;
 }
 
@@ -71,7 +77,9 @@ function projectFractionWasDropped(state: any, event: any) {
     const fractionType = event.payload.fraction_type;
     const weight = event.payload.weight;
     const priceClass = state.priceClass;
-    const nonExemptedWaste = Math.max(0, weight - priceClass[fractionType].exemption);
+    const exemptedWaste = Math.min(weight, state.exemption_budget[fractionType]);
+    const nonExemptedWaste = weight - exemptedWaste;
+    state.exemption_budget[fractionType] -= exemptedWaste;
     const wastePrice = priceClass[fractionType].price;
     state.price_amount += nonExemptedWaste * wastePrice;
     return state;
